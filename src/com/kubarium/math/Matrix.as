@@ -13,7 +13,7 @@ package com.kubarium.math {
 		}
 
 		public function assignValue(row:uint, column:uint, value:Number):void{
-			_m[(row-1) * columns + column-1] = value;
+			_m[(row-1) * columns + column-1] = value; 
 		}
 
 		private var _columns:uint;
