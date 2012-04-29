@@ -6,10 +6,11 @@ package com.kubarium.math {
 			_columns = columns;
 			_m = new Vector.<Vector.<Number>>();
 
-			if(!array){
+			if(!array) {
 				var i:int = 0;
 				array = new Array();
-				while(i<rows*columns)
+
+				while(i < rows * columns)
 					array[i++] = 0;
 			}
 
@@ -53,6 +54,86 @@ package com.kubarium.math {
 			_columns = value;
 		}
 
+		public function constant(value:Number):Matrix {
+			for(var j:uint = 0; j < rows; j++)
+				for(var k:uint = 0; k < columns; k++)
+					_m[j][k] = value;
+			return this;
+		}
+
+
+
+		public function identity():Matrix {
+			var temp:Matrix = new Matrix(rows, columns);
+
+			if(rows != columns)
+				throw new Error(SIZE_ERROR);
+			else {
+				for(var j:uint = 0; j < rows; j++)
+					_m[j][j] = 1;
+				_m = temp._m;
+				return this;
+			}
+		}
+
+		public function multiply(matrix:Matrix):Matrix {
+			if(columns != matrix.rows)
+				throw new Error(SIZE_ERROR);
+			else {
+				var temp:Matrix = new Matrix(rows, matrix.columns);
+
+				for(var i:uint = 0; i < rows; i++)
+					for(var j:uint = 0; j < matrix.columns; j++)
+						for(var k:uint = 0; k < matrix.rows; k++)
+							temp._m[i][j] += _m[i][k] * matrix._m[k][j];
+				_m = temp._m;
+				return this;
+			}
+		}
+
+		/**
+		 * Reduced row echelon form
+		 * @return
+		 *
+		 */		
+		public function RREF():Matrix {
+			var lead:uint, i:uint, j:uint, r:uint = 0;
+
+			for(r = 0; r < rows; r++) {
+				if(columns <= lead)
+					break;
+				i = r;
+
+				while(_m[i][lead] == 0) {
+					i++;
+
+					if(rows == i) {
+						i = r;
+						lead++;
+
+						if(columns == lead)
+							return this;
+					}
+				}
+				rowSwitch(i, r);
+				var val:Number = _m[r][lead];
+
+				for(j = 0; j < columns; j++)
+					_m[r][j] /= val;
+
+				for(i = 0; i < rows; i++) {
+					if(i == r)
+						continue;
+					val = _m[i][lead];
+
+					for(j = 0; j < columns; j++)
+						_m[i][j] -= val * _m[r][j];
+				}
+				lead++;
+			}
+			return this;
+		}
+
 		public function resize(r:Number, c:Number):void {
 			var j:Number, k:Number;
 			var diffR:Number = r - rows;
@@ -94,6 +175,17 @@ package com.kubarium.math {
 			columns = c;
 		}
 
+
+
+
+
+		public function rowSwitch(row1:uint, row2:uint):Matrix {
+			var temp:Vector.<Number> = temp = _m[row1];
+			_m[row1] = _m[row2];
+			_m[row2] = temp;
+			return this;
+		}
+
 		public function get rows():uint {
 			return _rows;
 		}
@@ -106,111 +198,6 @@ package com.kubarium.math {
 			for(var j:uint = 0; j < rows; j++)
 				for(var k:uint = 0; k < columns; k++)
 					_m[j][k] *= scalar;
-			return this;
-		}
-
-		public function multiply(matrix:Matrix):Matrix {
-			if(columns != matrix.rows)
-				throw new Error(SIZE_ERROR);
-			else {
-				var temp:Matrix = new Matrix(rows, matrix.columns);
-
-				for(var i:uint = 0; i < rows; i++)
-					for(var j:uint = 0; j < matrix.columns; j++)
-						for(var k:uint = 0; k < matrix.rows; k++)
-							temp._m[i][j] += _m[i][k] * matrix._m[k][j];
-
-				_m = temp._m;
-				return this;
-			}
-		}
-
-		public function constant(value:Number):Matrix{
-			for(var j:uint = 0; j < rows; j++)
-				for(var k:uint = 0; k < columns; k++)
-					_m[j][k]=value;
-			return this;
-		}
-
-		public function trace():Number {
-			var result:Number=0;
-			if(rows != columns)
-				throw new Error(SIZE_ERROR);
-			else {
-				for(var j:uint = 0; j < rows; j++)					
-					result += _m[j][j];
-				return result;
-			}
-		}
-
-		public function identity():Matrix {
-			var temp:Matrix = new Matrix(rows, columns);
-			if(rows != columns)
-				throw new Error(SIZE_ERROR);
-			else {
-				for(var j:uint = 0; j < rows; j++)					
-					_m[j][j] = 1;
-
-				_m = temp._m;
-				return this;
-			}
-		}
-
-		public function rowReduce():Matrix {
-			var j:Number, k:Number;
-			/*
-						if(rows == columns)
-							identity();
-						else if(rows < columns) {
-							*/
-			for(j = 0; j < rows; j++) {
-				if(j < (columns - 1) && _m[j][j] == 0)
-					rowSwitch(j, j + 1);
-				else if(_m[j][j] == 0)
-					break;
-				rowConstant(j, 1 / _m[j][j]);
-
-				for(k = 0; k < rows; k++) {
-					if(j != k)
-						elemCMA(j, -_m[k][j], k);
-				}
-			}
-			//}
-
-			return this;
-		}
-
-		public function elemCMA(row1:Number, s:Number, row2:Number):Matrix {
-			var j:Number;
-			// temp matrix to keep from changing the value of 'row1' -- same
-			// dimensions as 'this' but all extra elements are zero
-			var temp:Matrix = new Matrix(rows, columns);
-
-			// copy 'row1' of this matrix into 'temp[row2]' row
-			for(j = 0; j < columns; j++)
-				temp._m[row2][j] = _m[row1][j];
-			// multiply 'temp[row2]' by the constant 's'
-			temp.rowConstant(row2, s);
-
-			// add 'this' and 'temp' together
-			add(temp);
-
-			return this;
-		}
-
-		public function rowConstant(r:Number, s:Number):void {
-			var j:Number;
-
-			if(s != 0) {
-				for(j = 0; j < columns; j++)
-					_m[r][j] *= s;
-			}
-		}
-
-		public function rowSwitch(row1:uint, row2:uint):Matrix {
-			var temp:Vector.<Number> = temp = _m[row1];
-			_m[row1] = _m[row2];
-			_m[row2] = temp;
 			return this;
 		}
 
@@ -231,6 +218,18 @@ package com.kubarium.math {
 
 		public function toString():String {
 			return _m.join('\n');
+		}
+
+		public function trace():Number {
+			var result:Number = 0;
+
+			if(rows != columns)
+				throw new Error(SIZE_ERROR);
+			else {
+				for(var j:uint = 0; j < rows; j++)
+					result += _m[j][j];
+				return result;
+			}
 		}
 
 		public function transpose():Matrix {
